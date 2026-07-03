@@ -1255,7 +1255,7 @@ with tab2:
 st.markdown("""
 <div class="footer">
     <div class="social-icons">
-        <a href="https://github.com/Sahaj33-op/" target="_blank"><i class="fab fa-github"></i></a>
+        <a href="https://github.com/sizwinz/" target="_blank"><i class="fab fa-github"></i></a>
     </div>
     <p>© 2025 SkillWise. All rights reserved.</p>
     <p>

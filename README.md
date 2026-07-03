@@ -15,12 +15,12 @@
     <img src="https://img.shields.io/badge/Deployed%20on-Streamlit-ff4b4b?logo=streamlit" alt="Streamlit Deploy">
   </a>
   &nbsp;
-  <a href="https://github.com/Sahaj33-op/SkillWise/stargazers">
-    <img src="https://img.shields.io/github/stars/Sahaj33-op/SkillWise?style=social" alt="GitHub Stars">
+  <a href="https://github.com/sizwinz/SkillWise/stargazers">
+    <img src="https://img.shields.io/github/stars/sizwinz/SkillWise?style=social" alt="GitHub Stars">
   </a>
   &nbsp;
-  <a href="https://github.com/Sahaj33-op/SkillWise/network/members">
-    <img src="https://img.shields.io/github/forks/Sahaj33-op/SkillWise?style=social" alt="GitHub Forks">
+  <a href="https://github.com/sizwinz/SkillWise/network/members">
+    <img src="https://img.shields.io/github/forks/sizwinz/SkillWise?style=social" alt="GitHub Forks">
   </a>
 </p>
 
@@ -84,7 +84,7 @@
 ### 🔧 Run Locally
 
 ```bash
-git clone https://github.com/Sahaj33-op/SkillWise.git
+git clone https://github.com/sizwinz/SkillWise.git
 cd SkillWise
 pip install -r requirements.txt
 # Ensure system dependencies like tesseract-ocr are installed (see packages.txt or below)
