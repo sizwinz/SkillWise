@@ -5,10 +5,6 @@ import json
 import re
 import time
 from datetime import datetime
-from reportlab.lib.pagesizes import letter
-from reportlab.pdfgen import canvas
-from reportlab.lib.units import inch
-from reportlab.lib.colors import HexColor
 from resume_parser import parse_resume, parse_linkedin_json
 from roadmap_generator import generate_roadmap
 from goal_analyzer import analyze_goals
@@ -16,7 +12,11 @@ import google.generativeai as genai
 import plotly.express as px
 from datetime import timedelta
 from smart_gap_analyzer import get_smart_gap_analysis, SmartGapAnalysisError
-import hashlib
+
+# Import modular utility functions
+from utils.helpers import update_progress, generate_task_key, extract_roadmap_tasks
+from utils.database import roadmap_id, load_roadmaps_db, save_roadmaps_db, get_active_roadmap, sync_progress_from_active_roadmap
+from utils.pdf_exporter import generate_pdf
 
 if "user_db_id" not in st.session_state:
     import uuid
@@ -25,22 +25,11 @@ if "user_db_id" not in st.session_state:
 ROADMAPS_DB_PATH = os.path.join(os.path.dirname(__file__), f"roadmaps_db_{st.session_state.user_db_id}.json")
 
 
-def load_roadmaps_db():
-    if os.path.exists(ROADMAPS_DB_PATH):
-        with open(ROADMAPS_DB_PATH, "r") as f:
-            try:
-                return json.load(f)
-            except Exception:
-                return []
-    return []
+def load_db():
+    return load_roadmaps_db(ROADMAPS_DB_PATH)
 
-def save_roadmaps_db(roadmaps):
-    with open(ROADMAPS_DB_PATH, "w") as f:
-        json.dump(roadmaps, f, indent=2)
-
-def roadmap_id(resume, goal, role):
-    base = (resume.strip() + goal.strip() + role.strip()).encode("utf-8")
-    return hashlib.sha256(base).hexdigest()[:16]
+def save_db():
+    save_roadmaps_db(st.session_state.roadmaps_db, ROADMAPS_DB_PATH)
 
 # Load skills data from JSON
 @st.cache_data
@@ -54,72 +43,14 @@ def load_skills_data():
 
 skills_data = load_skills_data()
 
-def update_progress(progress_bar, eta_placeholder, current_progress, total_stages, start_time, estimated_time, stage_name):
-    """Update progress bar with current stage information."""
-    progress = (current_progress / total_stages) * 100
-    elapsed = time.time() - start_time
-    eta = max(0, estimated_time - elapsed)
-    progress_bar.progress(int(progress))
-    eta_placeholder.text(f"⏳ {stage_name}... {int(progress)}%")
-
-# Robust progress loading and saving
-def generate_task_key(section_name, raw_line):
-    """Generates a clean, unique key for tasks independent of markdown decoration."""
-    cleaned_line = re.sub(r"^\s*[-*]\s*(\[ \])?", "", raw_line).strip()
-    # Remove duration info from raw_line if present to match clean Gantt chart tasks
-    cleaned_line = re.sub(r"\s*\(.*\)\s*$", "", cleaned_line).strip()
-    clean_section = re.sub(r"[*#]", "", section_name).strip()
-    return f"{clean_section}::{cleaned_line}"
-
-def extract_roadmap_tasks(roadmap_text):
-    tasks = []
-    current_section = "General"
-    for line in roadmap_text.splitlines():
-        line_stripped = line.strip()
-        if not line_stripped:
-            continue
-        if line_stripped.startswith("##"):
-            current_section = line_stripped[2:].strip()
-        elif line_stripped.startswith("**") and line_stripped.endswith("**"):
-            current_section = line_stripped[2:-2].strip()
-        elif line_stripped.startswith("*") or line_stripped.startswith("-"):
-            cleaned = re.sub(r"^\s*[-*]\s*", "", line_stripped).strip()
-            if cleaned and not cleaned.startswith("[ ]") and not cleaned.startswith("[x]"):
-                tasks.append(generate_task_key(current_section, line_stripped))
-    return tasks
-
-
-def get_active_roadmap():
-    for r in st.session_state.roadmaps_db:
-        if r.get("active"):
-            return r
-    return None
-
-def sync_progress_from_active_roadmap():
-    active = get_active_roadmap()
-    if active is not None:
-        # Ensure progress field exists and matches current roadmap tasks
-        roadmap_tasks = extract_roadmap_tasks(active["roadmap"])
-        if "progress" not in active or not isinstance(active["progress"], dict):
-            active["progress"] = {task: False for task in roadmap_tasks}
-        else:
-            # Add missing tasks
-            for task in roadmap_tasks:
-                if task not in active["progress"]:
-                    active["progress"][task] = False
-            # Remove tasks not in roadmap
-            for task in list(active["progress"].keys()):
-                if task not in roadmap_tasks:
-                    del active["progress"][task]
-        st.session_state.progress = dict(active["progress"])
-    else:
-        st.session_state.progress = {}
+def sync_progress_state():
+    st.session_state.progress = sync_progress_from_active_roadmap(st.session_state.roadmaps_db, extract_roadmap_tasks)
 
 def save_progress_to_active_roadmap():
-    active = get_active_roadmap()
+    active = get_active_roadmap(st.session_state.roadmaps_db)
     if active is not None:
         active["progress"] = dict(st.session_state.progress)
-        save_roadmaps_db(st.session_state.roadmaps_db)
+        save_db()
 
 # Configure Streamlit page
 st.set_page_config(page_title="SkillWise", page_icon="SkillWise.png", layout="wide", initial_sidebar_state="expanded")
@@ -388,7 +319,7 @@ with tab1:
                     rr["active"] = (rr["id"] == found["id"])
                     if rr["active"]:
                         rr["last_accessed"] = datetime.now().isoformat()
-                save_roadmaps_db(st.session_state.roadmaps_db)
+                save_db()
                 st.session_state.resume_text = found["resume"]
                 st.session_state.goal = found["goal"]
                 st.session_state.role = found["role"]
@@ -449,7 +380,7 @@ with tab1:
                     for rr in st.session_state.roadmaps_db:
                         rr["active"] = False
                     st.session_state.roadmaps_db.insert(0, new_roadmap)
-                    save_roadmaps_db(st.session_state.roadmaps_db)
+                    save_db()
                     st.success("New roadmap saved and set as active. Check it in the Roadmap tab.")
                     st.rerun()
                 except Exception as e:
@@ -807,7 +738,7 @@ with tab2:
         st.markdown("---") # Separator before the old progress tracker
 
         st.subheader("Progress Tracker (Checklist)")
-        sync_progress_from_active_roadmap()
+        sync_progress_state()
 
         # Re-parse roadmap for checklist section, ensuring keys are consistent.
         # The key challenge is that Gantt parsing might differ slightly from checklist parsing.
@@ -969,332 +900,14 @@ with tab2:
             file_name="SkillWise_Roadmap.txt",
             mime="text/plain"
         )
-        # PDF export with fixed formatting
-        def clean_text(text):
-            # First, handle special characters
-            replacements = {
-                "–": "-",  # En dash to hyphen
-                "—": "-",  # Em dash to hyphen
-                "’": "'",  # Right single quote to straight quote
-                "‘": "'",  # Left single quote to straight quote
-                """: '"',  # Left double quote to straight quote
-                """: '"',  # Right double quote to straight quote
-                "*": "",  # Remove residual Markdown stars
-            }
-            for unicode_char, ascii_char in replacements.items():
-                text = text.replace(unicode_char, ascii_char)
-            
-            # Then, handle bullet points and formatting
-            text = text.replace(". ", "- ")  # Standardize bullet points
-            text = text.replace("•", "-")    # Convert bullet points to hyphens
-            text = text.replace("◦", "-")    # Convert sub-bullets to hyphens
-            
-            # Convert hyphens to colons for better readability
-            text = text.replace(" - ", ": ")
-            text = text.replace(" -", ": ")
-            
-            # Clean up any double spaces
-            text = " ".join(text.split())
-            
-            return text.encode("ascii", "ignore").decode("ascii")
-
-        def generate_pdf():
-            from io import BytesIO
-            buffer = BytesIO()
-            c = canvas.Canvas(buffer, pagesize=letter)
-            width, height = letter
-
-            # Enhanced margins and spacing
-            left_margin = 1 * inch
-            right_margin = 1 * inch
-            top_margin = 1 * inch
-            bottom_margin = 0.75 * inch
-            content_width = width - left_margin - right_margin
-
-            # Enhanced color scheme
-            primary_color = HexColor("#4a69bd")    # Main blue
-            accent_color = HexColor("#60a5fa")     # Light blue
-            text_color = HexColor("#2d2d44")       # Dark gray
-            highlight_color = HexColor("#e0e0e0")  # Light gray
-            phase_color = HexColor("#1a1a2e")      # Dark blue for phases
-
-            def draw_header():
-                # Draw logo with enhanced positioning
-                try:
-                    logo_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "SkillWise.png"))
-                    logo_width = 1.5 * inch
-                    logo_height = 0.5 * inch
-                    logo_x = left_margin
-                    logo_y = height - 0.7 * inch
-                    c.drawImage(logo_path, logo_x, logo_y, width=logo_width, height=logo_height, preserveAspectRatio=True)
-                except Exception as e:
-                    # If logo is missing, skip drawing it and print the attempted path
-                    print(f"[PDF] Could not load logo at {logo_path}: {e}")
-                    try:
-                        c.drawImage("SkillWise.png", logo_x, logo_y, width=logo_width, height=logo_height, preserveAspectRatio=True)
-                    except Exception as e2:
-                        print(f"[PDF] Fallback SkillWise.png also failed: {e2}")
-                    pass
-                # Enhanced title styling
-                c.setFont("Helvetica-Bold", 24)
-                c.setFillColor(primary_color)
-                title_x = left_margin + 1.5 * inch + 0.4 * inch
-                title_y = height - 0.6 * inch
-                c.drawString(title_x, title_y, "SkillWise Learning Roadmap")
-                # Decorative line with gradient
-                c.setStrokeColor(accent_color)
-                c.setLineWidth(2)
-                c.line(left_margin, height - 0.8 * inch, width - right_margin, height - 0.8 * inch)
-
-            def draw_footer(page_num):
-                # Enhanced footer design
-                c.setFont("Helvetica", 8)
-                c.setFillColor(text_color)
-                footer_text = f"Generated by SkillWise | Page {page_num} | {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
-                c.drawCentredString(width / 2, bottom_margin + 0.1 * inch, footer_text)
-                
-                # Footer decorative line
-                c.setStrokeColor(accent_color)
-                c.setLineWidth(1)
-                c.line(left_margin, bottom_margin + 0.3 * inch, width - right_margin, bottom_margin + 0.3 * inch)
-
-            def draw_section_header(text, y_pos, is_phase=False):
-                # Draw section header with enhanced styling
-                if is_phase:
-                    c.setFont("Helvetica-Bold", 20)
-                    c.setFillColor(phase_color)
-                    line_spacing = 24
-                else:
-                    c.setFont("Helvetica-Bold", 16)
-                    c.setFillColor(primary_color)
-                    line_spacing = 20
-                
-                # Draw decorative line before header
-                c.setStrokeColor(accent_color)
-                c.setLineWidth(1)
-                c.line(left_margin, y_pos + 0.2 * inch, width - right_margin, y_pos + 0.2 * inch)
-                
-                # Draw header text
-                y_pos = wrap_text(
-                    c, text, left_margin, y_pos, content_width,
-                    "Helvetica-Bold", 20 if is_phase else 16, line_spacing
-                )
-                
-                # Draw decorative line after header
-                c.setStrokeColor(accent_color)
-                c.setLineWidth(1)
-                c.line(left_margin, y_pos - 0.1 * inch, width - right_margin, y_pos - 0.1 * inch)
-                
-                return y_pos - 0.2 * inch
-
-            def wrap_text(c, text, x, y, max_width, font_name, font_size, line_spacing=12):
-                c.setFont(font_name, font_size)
-                words = text.split()
-                lines = []
-                current_line = []
-                current_width = 0
-
-                for word in words:
-                    word_width = c.stringWidth(word + " ", font_name, font_size)
-                    if current_width + word_width <= max_width:
-                        current_line.append(word)
-                        current_width += word_width
-                    else:
-                        lines.append(" ".join(current_line))
-                        current_line = [word]
-                        current_width = word_width
-                if current_line:
-                    lines.append(" ".join(current_line))
-
-                for line in lines:
-                    c.drawString(x, y, line)
-                    y -= line_spacing
-                return y
-
-            # Initialize variables
-            y_position = height - top_margin
-            page_num = 1
-
-            # Draw first page header
-            draw_header()
-            y_position -= 0.5 * inch
-
-            # Enhanced title section
-            title_text = "Your Personalized Learning Roadmap"
-            if st.session_state.get("focused_jd_roadmap"): # Check if it's a job-specific roadmap
-                title_text = "Focused Learning Roadmap (Based on Job Description)"
-
-            c.setFont("Helvetica-Bold", 28)
-            c.setFillColor(primary_color)
-            y_position = wrap_text(
-                c, title_text, left_margin, y_position,
-                content_width, "Helvetica-Bold", 28, line_spacing=32 # Increased line spacing for main title
-            )
-            y_position -= 0.3 * inch
-
-            # Generation date with enhanced styling
-            c.setFont("Helvetica", 12)
-            c.setFillColor(text_color)
-            y_position = wrap_text(
-                c, f"Generated on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} for role: {effective_role}",
-                left_margin, y_position, content_width, "Helvetica", 12, line_spacing=16
-            )
-            y_position -= 0.4 * inch
-
-            # Add Job Fit Analysis if available
-            if st.session_state.get("job_fit_analysis"):
-                if y_position < bottom_margin + 3 * inch: # Check space
-                    draw_footer(page_num)
-                    c.showPage()
-                    page_num += 1
-                    draw_header()
-                    y_position = height - top_margin - 0.5 * inch
-
-                y_position = draw_section_header("Job Fit Analysis", y_position, is_phase=False)
-                y_position -= 0.1 * inch # Small gap
-                analysis_text = clean_text(st.session_state.job_fit_analysis)
-                c.setFont("Helvetica", 10)
-                c.setFillColor(text_color)
-                y_position = wrap_text(c, analysis_text, left_margin + 0.2*inch, y_position, content_width - 0.2*inch, "Helvetica", 10, line_spacing=12)
-                y_position -= 0.3 * inch
-
-
-            # Add Smart AI Gap Analysis if available (and not a JD-focused roadmap, to avoid redundancy if similar)
-            if st.session_state.get("smart_gap_analysis_result") and not st.session_state.get("job_fit_analysis"):
-                if y_position < bottom_margin + 3 * inch: # Check space
-                    draw_footer(page_num)
-                    c.showPage()
-                    page_num += 1
-                    draw_header()
-                    y_position = height - top_margin - 0.5 * inch
-
-                y_position = draw_section_header("Smart AI Gap Analysis", y_position, is_phase=False)
-                y_position -= 0.1 * inch # Small gap
-                analysis_text = clean_text(st.session_state.smart_gap_analysis_result)
-                c.setFont("Helvetica", 10)
-                c.setFillColor(text_color)
-                y_position = wrap_text(c, analysis_text, left_margin + 0.2*inch, y_position, content_width - 0.2*inch, "Helvetica", 10, line_spacing=12)
-                y_position -= 0.3 * inch
-
-            # Process roadmap content with enhanced styling
-            lines = st.session_state.roadmap.splitlines()
-            current_phase = None
-            bullet_indent = left_margin + 0.3 * inch
-
-            for line in lines:
-                line = clean_text(line.strip())
-                if not line:
-                    continue
-
-                if y_position < bottom_margin + 1.5 * inch:
-                    draw_footer(page_num)
-                    c.showPage()
-                    page_num += 1
-                    draw_header()
-                    y_position = height - top_margin - 0.5 * inch
-
-                if line.startswith("##"):
-                    # Phase header
-                    text = line[2:].strip()
-                    y_position = draw_section_header(text, y_position, is_phase=True)
-                    current_phase = text
-
-                elif line.startswith("**") and line.endswith("**"):
-                    # Subsection header
-                    text = line[2:-2].strip()
-                    if y_position < bottom_margin + 2 * inch:
-                        draw_footer(page_num)
-                        c.showPage()
-                        page_num += 1
-                        draw_header()
-                        y_position = height - top_margin - 0.5 * inch
-
-                    y_position = draw_section_header(text, y_position, is_phase=False)
-
-                elif line.startswith("-"):
-                    # Main bullet point
-                    text = line[1:].strip()
-                    
-                    if ":" in text:
-                        title, description = text.split(":", 1)
-                        title = title.strip()
-                        description = description.strip()
-                        
-                        # Draw bullet point with enhanced styling
-                        c.setFont("Helvetica-Bold", 12)
-                        c.setFillColor(primary_color)
-                        y_position = wrap_text(
-                            c, f"• {title}:", bullet_indent, y_position, 
-                            content_width - 0.3 * inch, "Helvetica-Bold", 12, line_spacing=16
-                        )
-                        
-                        # Draw description with enhanced styling
-                        c.setFont("Helvetica", 11)
-                        c.setFillColor(text_color)
-                        y_position = wrap_text(
-                            c, f"  {description}", bullet_indent + 0.2 * inch, y_position, 
-                            content_width - 0.5 * inch, "Helvetica", 11, line_spacing=14
-                        )
-                    else:
-                        # Regular bullet point with enhanced styling
-                        c.setFont("Helvetica", 12)
-                        c.setFillColor(text_color)
-                        y_position = wrap_text(
-                            c, f"• {text}", bullet_indent, y_position, 
-                            content_width - 0.3 * inch, "Helvetica", 12, line_spacing=16
-                        )
-
-                elif line.startswith("  •"):
-                    # Sub bullet point
-                    text = line[3:].strip()
-                    
-                    if ":" in text:
-                        title, description = text.split(":", 1)
-                        title = title.strip()
-                        description = description.strip()
-                        
-                        # Draw sub-bullet point with enhanced styling
-                        c.setFont("Helvetica-Bold", 11)
-                        c.setFillColor(accent_color)
-                        y_position = wrap_text(
-                            c, f"  ◦ {title}:", bullet_indent + 0.2 * inch, y_position, 
-                            content_width - 0.5 * inch, "Helvetica-Bold", 11, line_spacing=14
-                        )
-                        
-                        # Draw description with enhanced styling
-                        c.setFont("Helvetica", 10)
-                        c.setFillColor(text_color)
-                        y_position = wrap_text(
-                            c, f"    {description}", bullet_indent + 0.4 * inch, y_position, 
-                            content_width - 0.7 * inch, "Helvetica", 10, line_spacing=12
-                        )
-                    else:
-                        # Regular sub-bullet point with enhanced styling
-                        c.setFont("Helvetica", 11)
-                        c.setFillColor(text_color)
-                        y_position = wrap_text(
-                            c, f"  ◦ {text}", bullet_indent + 0.2 * inch, y_position, 
-                            content_width - 0.5 * inch, "Helvetica", 11, line_spacing=14
-                        )
-
-                else:
-                    # Regular text with enhanced styling
-                    c.setFont("Helvetica", 11)
-                    c.setFillColor(text_color)
-                    y_position = wrap_text(
-                        c, line, left_margin, y_position, content_width,
-                        "Helvetica", 11, line_spacing=14
-                    )
-
-            draw_footer(page_num)
-            c.save()
-            pdf_bytes = buffer.getvalue()
-            buffer.close()
-            return pdf_bytes
-
         if st.button("Download as PDF"):
             try:
-                pdf_bytes = generate_pdf()
+                pdf_bytes = generate_pdf(
+                    st.session_state.roadmap,
+                    st.session_state.get("job_fit_analysis"),
+                    st.session_state.get("smart_gap_analysis_result"),
+                    effective_role
+                )
                 st.download_button(
                     label="Click to Download PDF",
                     data=pdf_bytes,
@@ -1340,7 +953,7 @@ st.markdown("""
 
 # --- On App Start: Load and display previous roadmaps ---
 if "roadmaps_db" not in st.session_state:
-    st.session_state.roadmaps_db = load_roadmaps_db()
+    st.session_state.roadmaps_db = load_db()
 
 # Find active roadmap
 active_roadmap = None
@@ -1353,7 +966,7 @@ for r in st.session_state.roadmaps_db:
 if not active_roadmap and st.session_state.roadmaps_db:
     st.session_state.roadmaps_db[0]["active"] = True
     active_roadmap = st.session_state.roadmaps_db[0]
-    save_roadmaps_db(st.session_state.roadmaps_db)
+    save_db()
 
 # Load active roadmap into session
 if active_roadmap:
@@ -1404,7 +1017,7 @@ with st.sidebar:
                         rr["active"] = (rr["id"] == r["id"])
                         if rr["active"]:
                             rr["last_accessed"] = datetime.now().isoformat()
-                    save_roadmaps_db(st.session_state.roadmaps_db)
+                    save_db()
                     st.session_state.resume_text = r["resume"]
                     st.session_state.goal = r["goal"]
                     st.session_state.role = r["role"]
@@ -1423,7 +1036,7 @@ with st.sidebar:
                     with col_confirm_yes:
                         if st.button("Yes", key=f"confirm_yes_{r['id']}"):
                             st.session_state.roadmaps_db = [rr for rr in st.session_state.roadmaps_db if rr["id"] != r["id"]]
-                            save_roadmaps_db(st.session_state.roadmaps_db)
+                            save_db()
                             st.toast("Roadmap deleted.")
                             del st.session_state[f'confirm_delete_{r["id"]}']
                             st.rerun()
@@ -1442,7 +1055,7 @@ with st.sidebar:
                             rr["active"] = (rr["id"] == r["id"])
                             if rr["active"]:
                                 rr["last_accessed"] = datetime.now().isoformat()
-                        save_roadmaps_db(st.session_state.roadmaps_db)
+                        save_db()
                         st.session_state.resume_text = r["resume"]
                         st.session_state.goal = r["goal"]
                         st.session_state.role = r["role"]
