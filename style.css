@@ -2,27 +2,28 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
 
 :root {
-    --bg-color: #020617;
-    /* Slate 950 - Darker base */
-    --bg-gradient: radial-gradient(circle at top left, #1e1b4b, #020617);
-    /* Indigo 950 to Slate 950 */
-    --glass-bg: rgba(15, 23, 42, 0.6);
-    /* Slate 900 with opacity */
-    --glass-border: rgba(255, 255, 255, 0.1);
+    --bg-color: #f8fafc;
+    /* Slate 50 - Off-white base */
+    --bg-gradient: radial-gradient(circle at 50% 0%, #eef2ff 0%, #f8fafc 100%);
+    /* Soft lavender mesh fade to Slate 50 */
+    --glass-bg: rgba(255, 255, 255, 0.75);
+    /* Translucent pure white */
+    --glass-border: rgba(15, 23, 42, 0.08);
+    /* Subtle slate-colored border */
     --primary: #6366f1;
     /* Indigo 500 */
     --primary-hover: #4f46e5;
     /* Indigo 600 */
-    --accent: #818cf8;
-    /* Indigo 400 */
-    --text-main: #f8fafc;
-    /* Slate 50 */
-    --text-muted: #94a3b8;
-    /* Slate 400 */
+    --accent: #d946ef;
+    /* Fuchsia 500 - Neon accent */
+    --text-main: #0f172a;
+    /* Slate 900 - Dark slate text */
+    --text-muted: #475569;
+    /* Slate 600 - Muted slate text */
     --success: #10b981;
     /* Emerald 500 */
-    --card-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
-    --glow: 0 0 20px rgba(99, 102, 241, 0.3);
+    --card-shadow: 0 20px 25px -5px rgba(15, 23, 42, 0.05), 0 10px 10px -5px rgba(15, 23, 42, 0.03);
+    --glow: 0 0 20px rgba(99, 102, 241, 0.12);
 }
 
 /* Global Reset & Body */
@@ -43,14 +44,14 @@ h6 {
     color: var(--text-main) !important;
     font-weight: 700;
     letter-spacing: -0.02em;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    text-shadow: none !important;
 }
 
 /* Sidebar */
 section[data-testid="stSidebar"] {
-    background-color: rgba(2, 6, 23, 0.95);
-    /* Slate 950 */
-    border-right: 1px solid var(--glass-border);
+    background-color: rgba(241, 245, 249, 0.96) !important;
+    /* Slate 100 */
+    border-right: 1px solid var(--glass-border) !important;
 }
 
 section[data-testid="stSidebar"] .block-container {
@@ -58,63 +59,77 @@ section[data-testid="stSidebar"] .block-container {
 }
 
 /* Inputs (Text Input, Selectbox, Text Area) */
-.stTextInput input,
+.stTextInput>div[data-baseweb="input"],
 .stSelectbox div[data-baseweb="select"]>div,
 .stTextArea textarea {
-    background-color: rgba(15, 23, 42, 0.6) !important;
-    border: 1px solid var(--glass-border) !important;
+    background-color: rgba(255, 255, 255, 0.9) !important;
+    border: 1px solid #cbd5e1 !important;
     color: var(--text-main) !important;
     border-radius: 12px !important;
-    backdrop-filter: blur(10px);
-    transition: all 0.3s ease;
+    backdrop-filter: blur(12px);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
     font-family: 'Inter', sans-serif;
 }
 
-.stTextInput input:focus,
+.stTextInput input {
+    border: none !important;
+    background-color: transparent !important;
+    color: var(--text-main) !important;
+}
+
+.stTextInput>div[data-baseweb="input"]:focus-within,
 .stSelectbox div[data-baseweb="select"]>div:focus-within,
 .stTextArea textarea:focus {
     border-color: var(--primary) !important;
-    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.25) !important;
-    background-color: rgba(30, 41, 59, 0.8) !important;
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2) !important;
+    background-color: #ffffff !important;
 }
 
 /* Buttons */
 .stButton>button {
-    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
-    color: white;
-    border: none;
-    border-radius: 12px;
-    padding: 0.75rem 1.5rem;
-    font-weight: 600;
-    letter-spacing: 0.02em;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
-    width: 100%;
-    text-transform: uppercase;
-    font-size: 0.9rem;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%) !important;
+    color: white !important;
+    border: none !important;
+    outline: none !important;
+    border-radius: 12px !important;
+    padding: 0.75rem 1.5rem !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.02em !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2) !important;
+    width: 100% !important;
+    text-transform: uppercase !important;
+    font-size: 0.9rem !important;
 }
 
 .stButton>button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(99, 102, 241, 0.5);
-    background: linear-gradient(135deg, var(--accent) 0%, var(--primary) 100%);
+    transform: translateY(-2px) scale(1.01) !important;
+    box-shadow: 0 8px 25px rgba(99, 102, 241, 0.35), 0 0 15px rgba(217, 70, 239, 0.15) !important;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--primary) 100%) !important;
 }
 
 .stButton>button:active {
-    transform: translateY(0);
+    transform: translateY(0) scale(1.0) !important;
+}
+
+.stButton>button:focus,
+.stButton>button:active:focus {
+    outline: none !important;
+    border: none !important;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2) !important;
 }
 
 /* Secondary Buttons (Outlined) */
 button[kind="secondary"] {
     background: transparent !important;
-    border: 1px solid var(--glass-border) !important;
+    border: 1px solid #cbd5e1 !important;
     color: var(--text-muted) !important;
 }
 
 button[kind="secondary"]:hover {
     border-color: var(--text-main) !important;
     color: var(--text-main) !important;
-    background: rgba(255, 255, 255, 0.05) !important;
+    background: rgba(15, 23, 42, 0.04) !important;
 }
 
 /* Cards & Containers */
@@ -127,6 +142,36 @@ button[kind="secondary"]:hover {
     padding: 2.5rem;
     margin-bottom: 2rem;
     box-shadow: var(--card-shadow);
+}
+
+/* Recent Roadmap Cards in Sidebar */
+.recent-roadmap-card, .recent-roadmap-card-active {
+    border: 1px solid var(--glass-border) !important;
+    border-radius: 12px !important;
+    padding: 16px !important;
+    margin-bottom: 12px !important;
+    background-color: rgba(255, 255, 255, 0.8) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03) !important;
+}
+
+.recent-roadmap-card:hover {
+    transform: translateY(-2px) !important;
+    border-color: rgba(99, 102, 241, 0.3) !important;
+    box-shadow: 0 8px 12px -3px rgba(15, 23, 42, 0.08), 0 3px 6px -2px rgba(15, 23, 42, 0.05) !important;
+}
+
+.recent-roadmap-card-active {
+    border-color: var(--primary) !important;
+    background: linear-gradient(135deg, rgba(238, 242, 255, 0.85) 0%, rgba(255, 255, 255, 0.85) 100%) !important;
+    box-shadow: var(--glow), 0 8px 12px -3px rgba(15, 23, 42, 0.08) !important;
+}
+
+.recent-roadmap-card p, .recent-roadmap-card-active p {
+    margin: 4px 0 !important;
+    font-size: 0.9rem !important;
 }
 
 /* Tabs */
@@ -149,20 +194,20 @@ button[kind="secondary"]:hover {
 
 .stTabs [data-baseweb="tab"]:hover {
     color: var(--text-main);
-    background-color: rgba(255, 255, 255, 0.05);
+    background-color: rgba(15, 23, 42, 0.03);
 }
 
 .stTabs [aria-selected="true"] {
-    background-color: rgba(99, 102, 241, 0.15) !important;
+    background-color: rgba(99, 102, 241, 0.08) !important;
     color: var(--primary) !important;
-    border: 1px solid rgba(99, 102, 241, 0.3);
+    border: 1px solid rgba(99, 102, 241, 0.2);
     border-bottom: none;
 }
 
 /* File Uploader */
 [data-testid="stFileUploaderDropzone"] {
-    background-color: rgba(15, 23, 42, 0.4) !important;
-    border: 2px dashed var(--glass-border) !important;
+    background-color: rgba(255, 255, 255, 0.6) !important;
+    border: 2px dashed #cbd5e1 !important;
     border-radius: 16px;
     transition: all 0.3s ease;
     padding: 2rem;
@@ -170,13 +215,13 @@ button[kind="secondary"]:hover {
 
 [data-testid="stFileUploaderDropzone"]:hover {
     border-color: var(--primary) !important;
-    background-color: rgba(30, 41, 59, 0.6) !important;
-    box-shadow: 0 0 15px rgba(99, 102, 241, 0.1);
+    background-color: rgba(238, 242, 255, 0.4) !important;
+    box-shadow: 0 0 15px rgba(99, 102, 241, 0.05);
 }
 
 /* Expander */
 .streamlit-expanderHeader {
-    background-color: rgba(30, 41, 59, 0.4) !important;
+    background-color: rgba(255, 255, 255, 0.7) !important;
     border: 1px solid var(--glass-border) !important;
     border-radius: 12px !important;
     color: var(--text-main) !important;
@@ -185,7 +230,7 @@ button[kind="secondary"]:hover {
 }
 
 .streamlit-expanderContent {
-    background-color: rgba(15, 23, 42, 0.4) !important;
+    background-color: rgba(255, 255, 255, 0.5) !important;
     border: 1px solid var(--glass-border);
     border-top: none;
     border-bottom-left-radius: 12px;
@@ -196,8 +241,8 @@ button[kind="secondary"]:hover {
 
 /* Progress Bar */
 .stProgress>div>div>div>div {
-    background: linear-gradient(90deg, var(--primary), var(--accent));
-    box-shadow: 0 0 10px rgba(99, 102, 241, 0.5);
+    background: linear-gradient(90deg, var(--primary), var(--accent)) !important;
+    box-shadow: 0 0 10px rgba(99, 102, 241, 0.2);
 }
 
 /* Checkbox */
@@ -251,30 +296,38 @@ button[kind="secondary"]:hover {
 }
 
 /* Alerts */
+.stSuccess, .stSuccess p, .stSuccess span, .stSuccess div {
+    color: #065f46 !important;
+}
 .stSuccess {
-    background-color: rgba(16, 185, 129, 0.15) !important;
-    border: 1px solid rgba(16, 185, 129, 0.3) !important;
-    color: #34d399 !important;
+    background-color: rgba(16, 185, 129, 0.1) !important;
+    border: 1px solid rgba(16, 185, 129, 0.25) !important;
     border-radius: 12px;
 }
 
+.stInfo, .stInfo p, .stInfo span, .stInfo div {
+    color: #3730a3 !important;
+}
 .stInfo {
-    background-color: rgba(99, 102, 241, 0.15) !important;
-    border: 1px solid rgba(99, 102, 241, 0.3) !important;
-    color: #a5b4fc !important;
+    background-color: rgba(99, 102, 241, 0.1) !important;
+    border: 1px solid rgba(99, 102, 241, 0.25) !important;
     border-radius: 12px;
 }
 
+.stWarning, .stWarning p, .stWarning span, .stWarning div {
+    color: #92400e !important;
+}
 .stWarning {
-    background-color: rgba(245, 158, 11, 0.15) !important;
-    border: 1px solid rgba(245, 158, 11, 0.3) !important;
-    color: #fbbf24 !important;
+    background-color: rgba(245, 158, 11, 0.1) !important;
+    border: 1px solid rgba(245, 158, 11, 0.25) !important;
     border-radius: 12px;
 }
 
+.stError, .stError p, .stError span, .stError div {
+    color: #991b1b !important;
+}
 .stError {
-    background-color: rgba(239, 68, 68, 0.15) !important;
-    border: 1px solid rgba(239, 68, 68, 0.3) !important;
-    color: #f87171 !important;
+    background-color: rgba(239, 68, 68, 0.1) !important;
+    border: 1px solid rgba(239, 68, 68, 0.25) !important;
     border-radius: 12px;
 }

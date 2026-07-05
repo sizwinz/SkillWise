@@ -44,8 +44,15 @@ def extract_text_with_ocr(pdf_path):
             text += pytesseract.image_to_string(img)
         doc.close()
         return text
+    except pytesseract.TesseractNotFoundError:
+        raise Exception(
+            "Tesseract OCR binary not found on your system. "
+            "Please install Tesseract OCR and ensure the binary path is correctly included "
+            "in your system's environment variables (PATH)."
+        )
     except Exception as e:
         raise Exception(f"Failed to perform OCR: {str(e)}")
+
 
 def parse_resume(pdf_path):
     """Parse resume with improved error handling and validation."""

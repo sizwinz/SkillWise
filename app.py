@@ -18,7 +18,11 @@ from datetime import timedelta
 from smart_gap_analyzer import get_smart_gap_analysis, SmartGapAnalysisError
 import hashlib
 
-ROADMAPS_DB_PATH = os.path.join(os.path.dirname(__file__), "roadmaps_db.json")
+if "user_db_id" not in st.session_state:
+    import uuid
+    st.session_state.user_db_id = str(uuid.uuid4())[:8]
+
+ROADMAPS_DB_PATH = os.path.join(os.path.dirname(__file__), f"roadmaps_db_{st.session_state.user_db_id}.json")
 
 
 def load_roadmaps_db():
@@ -59,16 +63,31 @@ def update_progress(progress_bar, eta_placeholder, current_progress, total_stage
     eta_placeholder.text(f"⏳ {stage_name}... {int(progress)}%")
 
 # Robust progress loading and saving
-import re
+def generate_task_key(section_name, raw_line):
+    """Generates a clean, unique key for tasks independent of markdown decoration."""
+    cleaned_line = re.sub(r"^\s*[-*]\s*(\[ \])?", "", raw_line).strip()
+    # Remove duration info from raw_line if present to match clean Gantt chart tasks
+    cleaned_line = re.sub(r"\s*\(.*\)\s*$", "", cleaned_line).strip()
+    clean_section = re.sub(r"[*#]", "", section_name).strip()
+    return f"{clean_section}::{cleaned_line}"
 
 def extract_roadmap_tasks(roadmap_text):
-    # Extract checklist tasks from the roadmap text (lines starting with - [ ])
     tasks = []
+    current_section = "General"
     for line in roadmap_text.splitlines():
-        match = re.match(r"\s*- \[.\] (.+)", line)
-        if match:
-            tasks.append(match.group(1).strip())
+        line_stripped = line.strip()
+        if not line_stripped:
+            continue
+        if line_stripped.startswith("##"):
+            current_section = line_stripped[2:].strip()
+        elif line_stripped.startswith("**") and line_stripped.endswith("**"):
+            current_section = line_stripped[2:-2].strip()
+        elif line_stripped.startswith("*") or line_stripped.startswith("-"):
+            cleaned = re.sub(r"^\s*[-*]\s*", "", line_stripped).strip()
+            if cleaned and not cleaned.startswith("[ ]") and not cleaned.startswith("[x]"):
+                tasks.append(generate_task_key(current_section, line_stripped))
     return tasks
+
 
 def get_active_roadmap():
     for r in st.session_state.roadmaps_db:
@@ -103,7 +122,7 @@ def save_progress_to_active_roadmap():
         save_roadmaps_db(st.session_state.roadmaps_db)
 
 # Configure Streamlit page
-st.set_page_config(page_title="SkillWise", page_icon="💡", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="SkillWise", page_icon="SkillWise.png", layout="wide", initial_sidebar_state="expanded")
 
 # Load external CSS
 with open('style.css') as f:
@@ -128,6 +147,12 @@ if "custom_role" not in st.session_state:
     st.session_state.custom_role = ""
 if "gemini_api_key" not in st.session_state:
     st.session_state.gemini_api_key = os.getenv("GEMINI_API_KEY", "")
+if "ai_provider" not in st.session_state:
+    st.session_state.ai_provider = "Google Gemini"
+if "api_key" not in st.session_state:
+    st.session_state.api_key = st.session_state.gemini_api_key
+if "selected_model" not in st.session_state:
+    st.session_state.selected_model = ""
 if "progress" not in st.session_state:
     st.session_state.progress = {}
 
@@ -144,46 +169,105 @@ if "resume_upload_time" not in st.session_state:
 if "is_processing" not in st.session_state:
     st.session_state.is_processing = False
 
+def get_image_base64(path):
+    import base64
+    try:
+        with open(path, "rb") as f:
+            return base64.b64encode(f.read()).decode()
+    except Exception:
+        return ""
+
+logo_base64 = get_image_base64("SkillWise.png")
+if logo_base64:
+    st.markdown(f"""
+        <div style="display: flex; align-items: center; justify-content: center; gap: 20px; margin-bottom: 2rem; margin-top: 1rem;">
+            <img src="data:image/png;base64,{logo_base64}" style="height: 105px; width: 105px; object-fit: contain;" />
+            <div style="display: flex; flex-direction: column; justify-content: center;">
+                <h1 style="font-size: 3.2rem; background: linear-gradient(to right, #6366f1, #d946ef); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 0; line-height: 1; font-family: 'Outfit', sans-serif; font-weight: 700;">SkillWise</h1>
+                <p style="font-size: 1.15rem; color: #475569; margin: 5px 0 0 0; font-family: 'Inter', sans-serif;">AI-Powered Learning Path Generator</p>
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
+else:
+    st.markdown("""
+        <div style="text-align: center; margin-bottom: 2rem; margin-top: 1rem;">
+            <h1 style="font-size: 3.2rem; background: linear-gradient(to right, #6366f1, #d946ef); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 0; line-height: 1; font-family: 'Outfit', sans-serif; font-weight: 700;">SkillWise</h1>
+            <p style="font-size: 1.15rem; color: #475569; margin: 5px 0 0 0; font-family: 'Inter', sans-serif;">AI-Powered Learning Path Generator</p>
+        </div>
+    """, unsafe_allow_html=True)
+
 # Onboarding Walkthrough for first-time users
 if st.session_state.first_visit:
     st.info("""
-    ### Welcome to SkillWise! 🎉
+    ### Welcome to SkillWise
     Follow these steps to get started:
-    1. **Enter your Gemini API Key** in the sidebar (⚙️ Configuration).
-    2. **Upload your resume** in the Resume tab (📄 Upload Your Resume).
-    3. **Select your career goal and role** (e.g., AI Engineer).
-    4. Click **Generate Roadmap** to create your personalized learning path.
-    5. Explore your roadmap in the Roadmap tab (🗺️).
+    1. Configure your AI Provider and API Key/URL in the sidebar (Configuration).
+    2. Upload your resume in the Resume tab (Upload Your Resume).
+    3. Select your career goal and role (e.g., AI Engineer).
+    4. Click Generate Roadmap to create your personalized learning path.
+    5. Explore your roadmap in the Roadmap tab.
     """)
     st.session_state.first_visit = False
 
 # Handle Gemini API key with Submit button and Change option
 with st.sidebar:
-    st.header("⚙️ Configuration")
-    if not st.session_state.gemini_api_key:
-        st.warning("⚠️ Gemini API key not found. Please enter it below.")
-        api_key_input = st.text_input("Enter Gemini API Key", type="password")
-        if st.button("Submit"):
-            if api_key_input:
-                st.session_state.gemini_api_key = api_key_input
-                genai.configure(api_key=api_key_input)
-                st.success("✅ API Key submitted!")
-            else:
-                st.error("❌ Please enter a valid API key.")
+    st.header("Configuration")
+    
+    provider_list = ["Google Gemini", "OpenAI (ChatGPT)", "Anthropic (Claude)", "Groq", "Ollama (Local)", "OpenRouter", "xAI (Grok)", "Mistral"]
+    selected_provider = st.selectbox("AI Provider", provider_list, index=provider_list.index(st.session_state.ai_provider) if st.session_state.ai_provider in provider_list else 0)
+    
+    # Track if provider changed
+    if selected_provider != st.session_state.ai_provider:
+        st.session_state.ai_provider = selected_provider
+        st.session_state.selected_model = ""
+        st.rerun()
+        
+    if st.session_state.ai_provider == "Ollama (Local)":
+        api_label = "Ollama Base URL"
+        default_placeholder = "http://localhost:11434"
+        input_type = "default"
     else:
-        st.success("✅ API Key is set!")
-        if st.button("🔄 Change API Key"):
-            st.session_state.gemini_api_key = ""
-            st.rerun()
+        api_label = f"{st.session_state.ai_provider} API Key"
+        default_placeholder = "Enter your API key"
+        input_type = "password"
+        
+    api_key_input = st.text_input(api_label, type=input_type, value=st.session_state.api_key, placeholder=default_placeholder)
+    
+    if st.button("Apply Config & Fetch Models"):
+        st.session_state.api_key = api_key_input
+        if st.session_state.ai_provider == "Google Gemini":
+            st.session_state.gemini_api_key = api_key_input
+            os.environ["GEMINI_API_KEY"] = api_key_input
+            genai.configure(api_key=api_key_input)
+        else:
+            env_key_name = {
+                "OpenAI (ChatGPT)": "OPENAI_API_KEY",
+                "Anthropic (Claude)": "ANTHROPIC_API_KEY",
+                "Groq": "GROQ_API_KEY",
+                "OpenRouter": "OPENROUTER_API_KEY",
+                "xAI (Grok)": "XAI_API_KEY",
+                "Mistral": "MISTRAL_API_KEY"
+            }.get(st.session_state.ai_provider)
+            if env_key_name:
+                os.environ[env_key_name] = api_key_input
+        st.success("Configuration applied!")
+        st.rerun()
+        
+    if st.session_state.api_key:
+        from llm_helper import fetch_available_models
+        with st.spinner("Loading models..."):
+            models = fetch_available_models(st.session_state.ai_provider, st.session_state.api_key)
+        if models:
+            if st.session_state.selected_model not in models:
+                st.session_state.selected_model = models[0]
+            st.selectbox("Select Model", models, key="selected_model")
+        else:
+            st.warning("No models found. Using default model.")
+            st.session_state.selected_model = ""
+    else:
+        st.warning(f"Please configure {api_label} to fetch models.")
         
 
-
-st.markdown("""
-    <div style="text-align: center; padding: 2rem 0; margin-bottom: 2rem;">
-        <h1 style="font-size: 3.5rem; background: linear-gradient(to right, #6366f1, #818cf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 0.5rem; font-family: 'Outfit', sans-serif; font-weight: 700;">SkillWise</h1>
-        <p style="font-size: 1.2rem; color: #94a3b8; font-family: 'Inter', sans-serif;">AI-Powered Learning Path Generator</p>
-    </div>
-""", unsafe_allow_html=True)
 
 # Tabs
 tab1, tab2 = st.tabs(["Resume", "Roadmap"])
@@ -192,18 +276,23 @@ tab1, tab2 = st.tabs(["Resume", "Roadmap"])
 with tab1:
     col1, col2 = st.columns([1, 1])
     with col1:
-        st.subheader("🎯 Select Career Goal")
+        st.subheader("Select Career Goal")
         st.session_state.goal = st.text_input("What role are you targeting?", placeholder="e.g., AI Developer, Product Manager", value=st.session_state.goal)
         if st.session_state.goal.strip():
-            goal_analysis = analyze_goals(st.session_state.goal)
-            # Check for the specific NLTK error message
-            if "Error analyzing goal" in goal_analysis:
-                st.warning("⚠️ There was an issue analyzing your goal. Please ensure NLTK data is correctly set up or try a different goal.")
+            goal_analysis = analyze_goals(
+                st.session_state.goal,
+                provider=st.session_state.ai_provider,
+                api_key=st.session_state.api_key,
+                model=st.session_state.selected_model
+            )
+            if goal_analysis.startswith("⚠️"):
+                st.error(goal_analysis)
             else:
                 pass
 
+
     with col2:
-        st.subheader("📚 Select Tech Role")
+        st.subheader("Select Tech Role")
         roles = [
             "Select a tech role",
             "AI Engineer",
@@ -228,7 +317,7 @@ with tab1:
             st.session_state.custom_role = st.text_input("Please specify your role", placeholder="e.g., Game Developer", value=st.session_state.custom_role)
     
     effective_role = st.session_state.custom_role if st.session_state.role == "Other" and st.session_state.custom_role else st.session_state.role
-    st.subheader("📄 Upload Your Resume")
+    st.subheader("Upload Your Resume")
     uploaded_file = st.file_uploader("Upload your resume (PDF or LinkedIn JSON)", type=["pdf", "json"])
     
     if uploaded_file is not None and not st.session_state.is_processing:
@@ -276,15 +365,15 @@ with tab1:
             total_time = time.time() - start_time
             st.session_state.resume_upload_time = total_time
 
-    if st.button("🚀 Generate Roadmap") and not st.session_state.is_processing:
+    if st.button("Generate Roadmap") and not st.session_state.is_processing:
         if not st.session_state.parsed_resume:
-            st.warning("⚠️ Please upload a resume.")
+            st.warning("Please upload a resume.")
         elif effective_role == "Select a tech role":
-            st.warning("⚠️ Please select a valid role.")
+            st.warning("Please select a valid role.")
         elif st.session_state.role == "Other" and not st.session_state.custom_role.strip():
-            st.warning("⚠️ Please specify a role in the text field.")
-        elif not st.session_state.gemini_api_key:
-            st.error("❌ Please enter a Gemini API key in the sidebar.")
+            st.warning("Please specify a role in the text field.")
+        elif not st.session_state.api_key:
+            st.error(f"Please enter an API key or Base URL for {st.session_state.ai_provider} in the sidebar.")
         else:
             # --- Persistent Roadmap Management Integration ---
             new_id = roadmap_id(st.session_state.resume_text, st.session_state.goal, effective_role)
@@ -329,7 +418,8 @@ with tab1:
                 start_time = time.time()
                 error_occurred = False
                 try:
-                    genai.configure(api_key=st.session_state.gemini_api_key)
+                    if st.session_state.ai_provider == "Google Gemini" and st.session_state.api_key:
+                        genai.configure(api_key=st.session_state.api_key)
                     estimated_duration = st.session_state.generation_time
                     steps = 50
                     for i in range(steps):
@@ -344,7 +434,7 @@ with tab1:
                     update_progress(progress_bar, eta_placeholder, 100, 100, start_time, estimated_duration, "Complete")
                     actual_time = time.time() - start_time
                     st.session_state.generation_time = actual_time
-                    processing_status_container.success("✅ Roadmap generated! Check it in the Roadmap tab.")
+                    processing_status_container.success("Roadmap generated! Check it in the Roadmap tab.")
                     # Save new roadmap to DB
                     new_roadmap = {
                         "id": new_id,
@@ -364,25 +454,25 @@ with tab1:
                     st.rerun()
                 except Exception as e:
                     error_occurred = True
-                    processing_status_container.error(f"❌ Error generating roadmap: {str(e)}")
+                    processing_status_container.error(f"Error generating roadmap: {str(e)}")
                 finally:
                     st.session_state.is_processing = False
 
     st.markdown("---")
     # Job Role Simulator Expander
-    with st.expander("🎯 Job Role Simulator (Optional)", expanded=False):
+    with st.expander("Job Role Simulator (Optional)", expanded=False):
         st.subheader("Simulate Your Fit for a Specific Job")
         jd_text_input = st.text_area("Paste Job Description Text Here:", height=200, key="jd_text_input",
                                      help="Paste the full text of the job description you are interested in.")
 
 
-        if st.button("🚀 Analyze Fit & Generate Focused Roadmap", key="analyze_jd_button"):
+        if st.button("Analyze Fit & Generate Focused Roadmap", key="analyze_jd_button"):
             if not st.session_state.parsed_resume:
-                st.warning("⚠️ Please upload your resume first before analyzing a job description.")
+                st.warning("Please upload your resume first before analyzing a job description.")
             elif not jd_text_input.strip(): # and not jd_url_input.strip()
-                st.warning("⚠️ Please paste the job description text.") # or provide a URL
-            elif not st.session_state.gemini_api_key:
-                st.error("❌ Please enter a Gemini API key in the sidebar.")
+                st.warning("Please paste the job description text.") # or provide a URL
+            elif not st.session_state.api_key:
+                st.error(f"Please enter an API key or Base URL for {st.session_state.ai_provider} in the sidebar.")
             else:
                 job_description_content = jd_text_input.strip()
 
@@ -392,7 +482,7 @@ with tab1:
                     jd_status_container = st.empty()
 
                     with jd_status_container.container():
-                        st.subheader("🔍 Job Fit Analysis:")
+                        st.subheader("Job Fit Analysis:")
                         with st.spinner("Analyzing your resume against the job description..."):
                             try:
                                 fit_analysis_prompt = (
@@ -402,16 +492,20 @@ with tab1:
                                     "Highlight key strengths and specific gaps or missing qualifications relevant to this job. "
                                     "Conclude with a percentage fit score (e.g., Fit Score: 75%)."
                                 )
-                                model = genai.GenerativeModel("gemini-2.0-flash") # Ensure model is configured
-                                response_fit = model.generate_content(fit_analysis_prompt)
-                                st.session_state.job_fit_analysis = response_fit.text.strip()
+                                from llm_helper import generate_llm_content
+                                st.session_state.job_fit_analysis = generate_llm_content(
+                                    st.session_state.ai_provider,
+                                    st.session_state.api_key,
+                                    st.session_state.selected_model,
+                                    fit_analysis_prompt
+                                )
                                 st.markdown(st.session_state.job_fit_analysis)
                             except Exception as e:
                                 st.error(f"Error during Job Fit Analysis: {e}")
                                 st.session_state.job_fit_analysis = None
 
                         if st.session_state.job_fit_analysis:
-                            st.subheader("🗺️ Generating Focused Roadmap for this Job:")
+                            st.subheader("Generating Focused Roadmap for this Job:")
                             with st.spinner("Generating a new roadmap focused on this job's requirements..."):
                                 try:
                                     focused_roadmap_prompt = (
@@ -430,7 +524,7 @@ with tab1:
                                     # Option: Update main roadmap or show separately
                                     # For now, let's update the main roadmap and notify the user
                                     st.session_state.roadmap = focused_roadmap
-                                    st.success("✅ Focused roadmap generated and updated in the 'Roadmap' tab!")
+                                    st.success("Focused roadmap generated and updated in the 'Roadmap' tab!")
                                     # Also clear any previous smart gap analysis as the roadmap context has changed
                                     if "smart_gap_analysis_result" in st.session_state:
                                         del st.session_state.smart_gap_analysis_result
@@ -446,7 +540,7 @@ with tab1:
 # Roadmap Tab
 with tab2:
     if st.session_state.roadmap:
-        st.header("🗺️ Your AI-Powered Learning Roadmap")
+        st.header("Your AI-Powered Learning Roadmap")
         
         required_skills = {}
         default_skills = []
@@ -462,17 +556,17 @@ with tab2:
 
             skills_to_check = required_skills.get(effective_role, default_skills)
         else:
-            st.warning("⚠️ Skill data could not be loaded. Please check 'skills_data.json'.")
+            st.warning("Skill data could not be loaded. Please check 'skills_data.json'.")
 
         # Smart AI Gap Detector
-        st.subheader("🤖 Smart AI Gap Analysis")
+        st.subheader("Smart AI Gap Analysis")
         if st.session_state.resume_text and effective_role != "Select a tech role":
             if "smart_gap_analysis_result" not in st.session_state or \
                st.session_state.get("smart_gap_analysis_role") != effective_role or \
                st.session_state.get("smart_gap_analysis_resume") != st.session_state.resume_text:
 
                 # Button to trigger analysis to avoid running on every rerun if not needed
-                if st.button("🔬 Analyze My Skills with AI", key="run_smart_analysis"):
+                if st.button("Analyze My Skills with AI", key="run_smart_analysis"):
                     with st.spinner("Performing Smart AI Gap Analysis... This may take a moment."):
                         try:
                             analysis_result = get_smart_gap_analysis(
@@ -534,7 +628,7 @@ with tab2:
         # st.markdown("---")
 
         # Visual Timeline (Gantt Chart)
-        st.subheader("🗓️ Visual Timeline (6 Months)")
+        st.subheader("Visual Timeline (6 Months)")
 
         def parse_duration(duration_str):
             """Parses duration like '(1 week)', '(3 days)' into timedelta."""
@@ -602,10 +696,8 @@ with tab2:
                 elif task_type == "Module":
                     progress_key = f"{current_phase_gantt}_{task_name}"
                 else: # Task
-                    # This needs to match the checkbox key logic: f"{current_section}_{content_line}"
-                    # We need to reconstruct `current_section` as it was when checkboxes were made.
-                    # This is tricky. For now, let's assume module name is a good proxy for section for tasks.
-                    progress_key = f"{current_module_gantt}_{line_content}"
+                    progress_key = generate_task_key(current_module_gantt, line_content)
+
 
 
                 completed_status = st.session_state.progress.get(progress_key, False)
@@ -652,9 +744,9 @@ with tab2:
             fig_gantt.update_layout(
                 title_font_size=20,
                 font_size=12,
-                plot_bgcolor='rgba(15, 23, 42, 0.4)', 
+                plot_bgcolor='rgba(241, 245, 249, 0.5)', 
                 paper_bgcolor='rgba(0,0,0,0)',
-                font_color="#f8fafc",
+                font_color="#0f172a",
                 legend_title_text='Task Status',
                 font_family="Inter"
             )
@@ -691,32 +783,8 @@ with tab2:
                                 break
                         break
 
-                # The progress key for a checkbox is `f"{current_section}_{content_line}"`
-                # where current_section is the module name (e.g. "Module 1.1: Introduction to X")
-                # and content_line is the task line (e.g. "* Learn basic syntax (1 week)")
-                # This part is the most complex to get right with current parsing.
-                # The Gantt task name is cleaned, but the progress key uses the raw line.
+                target_progress_key = generate_task_key(_current_module_for_key, original_line_for_selected_task) if original_line_for_selected_task else None
 
-                # Let's try to find the progress key more directly if possible
-                # This requires matching the cleaned task name back to its original form + section
-                target_progress_key = None
-                for key_iter, val_iter in st.session_state.progress.items():
-                    # Progress keys are like "Section Name_* Task Name (duration)"
-                    if selected_gantt_task_name in key_iter and key_iter.endswith(original_line_for_selected_task):
-                        target_progress_key = key_iter
-                        break
-                # Fallback if exact match not found (e.g. due to name cleaning)
-                if not target_progress_key and original_line_for_selected_task:
-                     # Attempt to find a key that contains the task name and its original line structure
-                    for key_iter, val_iter in st.session_state.progress.items():
-                        if selected_gantt_task_name in key_iter and original_line_for_selected_task.split('(')[0].strip() in key_iter :
-                             target_progress_key = key_iter
-                             break
-
-                if not target_progress_key and original_line_for_selected_task:
-                    # Last resort: construct based on identified module and original line
-                    # This relies on _current_module_for_key being accurately identified for the task
-                    target_progress_key = f"{_current_module_for_key}_{original_line_for_selected_task}"
 
 
                 col_gantt_action1, col_gantt_action2 = st.columns(2)
@@ -730,7 +798,7 @@ with tab2:
                             st.success(f"Task '{selected_gantt_task_name}' status updated.")
                             st.rerun() # To update Gantt chart color
                     else:
-                        st.warning(f"Could not reliably link '{selected_gantt_task_name}' to progress tracker. Progress key: {target_progress_key}")
+                        st.warning(f"Could not reliably link '{selected_gantt_task_name}' to progress tracker.")
 
 
         else:
@@ -738,7 +806,7 @@ with tab2:
 
         st.markdown("---") # Separator before the old progress tracker
 
-        st.subheader("📈 Progress Tracker (Checklist)")
+        st.subheader("Progress Tracker (Checklist)")
         sync_progress_from_active_roadmap()
 
         # Re-parse roadmap for checklist section, ensuring keys are consistent.
@@ -771,7 +839,7 @@ with tab2:
                     #    st.session_state.editing_section = ... (needs careful index mapping)
                     for content_line_idx, content_line in enumerate(checklist_section_content):
                         if content_line.startswith("*"):
-                            item_key = f"{checklist_current_section}_{content_line}"
+                            item_key = generate_task_key(checklist_current_section, content_line)
                             if item_key not in st.session_state.progress:
                                 st.session_state.progress[item_key] = False
                             completed = st.checkbox(
@@ -796,7 +864,7 @@ with tab2:
                     st.markdown(f"### {checklist_current_section}")
                     for content_line_idx, content_line in enumerate(checklist_section_content):
                         if content_line.startswith("*"):
-                            item_key = f"{checklist_current_section}_{content_line}"
+                            item_key = generate_task_key(checklist_current_section, content_line)
                             # ... (checkbox logic as above) ...
                             if item_key not in st.session_state.progress:
                                 st.session_state.progress[item_key] = False
@@ -834,7 +902,7 @@ with tab2:
             #    st.session_state.editing_section = ...
             for content_line_idx, content_line in enumerate(checklist_section_content):
                 if content_line.startswith("*"):
-                    item_key = f"{checklist_current_section}_{content_line}"
+                    item_key = generate_task_key(checklist_current_section, content_line)
                     if item_key not in st.session_state.progress:
                         st.session_state.progress[item_key] = False
                     completed = st.checkbox(
@@ -855,7 +923,7 @@ with tab2:
              for content_line_idx, content_line in enumerate(checklist_section_content):
                 if content_line.startswith("*"):
                     # Simplified key if no section
-                    item_key = f"general_{content_line}"
+                    item_key = generate_task_key("general", content_line)
                     if item_key not in st.session_state.progress:
                         st.session_state.progress[item_key] = False
                     completed = st.checkbox(
@@ -872,27 +940,31 @@ with tab2:
 
 
 
-        st.subheader("❓ Ask About Your Roadmap")
+        st.subheader("Ask About Your Roadmap")
         question = st.text_input("Enter your question (e.g., 'How long will SQL take?')")
         if st.button("Get Answer"):
             if question:
-                if not st.session_state.gemini_api_key:
-                    st.error("❌ Please enter a Gemini API key in the sidebar.")
+                if not st.session_state.api_key:
+                    st.error(f"Please enter an API key or Base URL for {st.session_state.ai_provider} in the sidebar.")
                 else:
                     try:
                         with st.spinner("Fetching answer..."):
-                            genai.configure(api_key=st.session_state.gemini_api_key)
-                            model = genai.GenerativeModel("gemini-1.5-flash")
-                            response = model.generate_content(f"Roadmap: {st.session_state.roadmap}\nQuestion: {question}")
-                            st.markdown(response.text)
+                            from llm_helper import generate_llm_content
+                            response_text = generate_llm_content(
+                                st.session_state.ai_provider,
+                                st.session_state.api_key,
+                                st.session_state.selected_model,
+                                f"Roadmap: {st.session_state.roadmap}\nQuestion: {question}"
+                            )
+                            st.markdown(response_text)
                     except Exception as e:
-                        st.error(f"❌ Error fetching answer: {e}")
+                        st.error(f"Error fetching answer: {e}")
             else:
-                st.warning("⚠️ Please enter a question.")
+                st.warning("Please enter a question.")
 
-        st.subheader("📥 Export Your Roadmap")
+        st.subheader("Export Your Roadmap")
         st.download_button(
-            label="📄 Download as TXT",
+            label="Download as TXT",
             data=st.session_state.roadmap,
             file_name="SkillWise_Roadmap.txt",
             mime="text/plain"
@@ -949,7 +1021,7 @@ with tab2:
             def draw_header():
                 # Draw logo with enhanced positioning
                 try:
-                    logo_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "logo.png"))
+                    logo_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "SkillWise.png"))
                     logo_width = 1.5 * inch
                     logo_height = 0.5 * inch
                     logo_x = left_margin
@@ -959,9 +1031,9 @@ with tab2:
                     # If logo is missing, skip drawing it and print the attempted path
                     print(f"[PDF] Could not load logo at {logo_path}: {e}")
                     try:
-                        c.drawImage("logo.png", logo_x, logo_y, width=logo_width, height=logo_height, preserveAspectRatio=True)
+                        c.drawImage("SkillWise.png", logo_x, logo_y, width=logo_width, height=logo_height, preserveAspectRatio=True)
                     except Exception as e2:
-                        print(f"[PDF] Fallback logo.png also failed: {e2}")
+                        print(f"[PDF] Fallback SkillWise.png also failed: {e2}")
                     pass
                 # Enhanced title styling
                 c.setFont("Helvetica-Bold", 24)
@@ -1220,17 +1292,17 @@ with tab2:
             buffer.close()
             return pdf_bytes
 
-        if st.button("📄 Download as PDF"):
+        if st.button("Download as PDF"):
             try:
                 pdf_bytes = generate_pdf()
                 st.download_button(
-                    label="📄 Click to Download PDF",
+                    label="Click to Download PDF",
                     data=pdf_bytes,
                     file_name="SkillWise_Roadmap.pdf",
                     mime="application/pdf"
                 )
             except Exception as e:
-                st.error(f"❌ Error generating PDF: {str(e)}")
+                st.error(f"Error generating PDF: {str(e)}")
         
         roadmap_data = {
             "resume": st.session_state.resume_text,
@@ -1264,8 +1336,6 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-ROADMAPS_DB_PATH = os.path.join(os.path.dirname(__file__), "roadmaps_db.json")
-
 # --- Persistent Roadmap Management ---
 
 # --- On App Start: Load and display previous roadmaps ---
@@ -1295,9 +1365,9 @@ if active_roadmap:
 # --- UI: Recent Roadmaps Sidebar ---
 with st.sidebar:
     st.markdown("---", unsafe_allow_html=True)
-    st.header("🗂️ Your Recent Roadmaps")
+    st.header("Your Recent Roadmaps")
     # Search/filter box
-    search_query = st.text_input("🔍 Search by role or goal", "")
+    search_query = st.text_input("Search by role or goal", "")
     filtered_roadmaps = st.session_state.roadmaps_db
     if search_query.strip():
         sq = search_query.lower()
@@ -1305,7 +1375,7 @@ with st.sidebar:
     # Export all button
     if filtered_roadmaps:
         st.download_button(
-            "⬇️ Export All",
+            "Export All",
             data=json.dumps(filtered_roadmaps, indent=2),
             file_name="SkillWise_All_Roadmaps.json",
             mime="application/json",
@@ -1315,9 +1385,11 @@ with st.sidebar:
     if filtered_roadmaps:
         for idx, r in enumerate(sorted(filtered_roadmaps, key=lambda x: x.get("last_accessed", x["timestamp"]), reverse=True)):
             is_active = r.get("active", False)
+            card_class = "recent-roadmap-card-active" if is_active else "recent-roadmap-card"
             with st.container():
-                st.markdown(f"<div style='border:2px solid {'#60a5fa' if is_active else '#444'}; border-radius:10px; padding:10px; margin-bottom:10px; background-color:{'#23234a' if is_active else '#191932'}'>", unsafe_allow_html=True)
+                st.markdown(f"<div class='{card_class}'>", unsafe_allow_html=True)
                 st.markdown(f"**Role:** {r['role']}  ")
+
                 st.markdown(f"**Goal:** {r['goal']}  ")
                 st.markdown(f"**Date:** {r['timestamp'][:19].replace('T',' ')}  ")
                 st.markdown(f"**ID:** `{r['id']}`")
