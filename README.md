@@ -41,6 +41,10 @@
 
 SkillWise is a career transition intelligence application. By parsing engineering resumes or structured LinkedIn datasets and querying state-of-the-art LLM providers, SkillWise conducts programmatic gap detection, runs zero-shot job simulation matching, visualizes progress timelines dynamically, and tracks target-milestone completion natively with local persistence.
 
+<p align="center">
+  <img src="screenshots/screenshot.png" width="800" alt="SkillWise Interface Dashboard"/>
+</p>
+
 ---
 
 ## Core Features
@@ -59,7 +63,7 @@ SkillWise is a career transition intelligence application. By parsing engineerin
 * **Integrated Checklist & State Syncer:** Tracking logic parsing task lists from roadmaps to map completion flags into local sync routines.
 
 ### 4. Job Role Simulation Environment
-* **Ad-Hoc Job Description Matching:** Subsystem enabling immediate resume pairing against arbitrary copy-pasted job descriptions to produce clear fit metrics and percentage compatibility ratings.
+* **Ad-Hoc Job Description Matching:** Subsystem enabling immediate resume pairing against arbitrary copy-pasted job descriptions to produce fit metrics and percentage compatibility ratings.
 * **Targeted Remediation Plans:** Generates targeted 6-month plans designed around neutralizing deficiencies found in a given job description.
 
 ### 5. Persistent Session Management & State Storage
@@ -193,6 +197,4 @@ SkillWise/
 
 ## License
 
-Distributed directly under the terms of the open-source **MIT License**. Check out the [`LICENSE`](https://www.google.com/search?q=LICENSE) verification file for detailed phrasing constraints.
-
----
+Distributed directly under the terms of the open-source **MIT License**. Check out the `LICENSE` verification file for detailed phrasing constraints.
