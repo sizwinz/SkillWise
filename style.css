@@ -1,333 +1,287 @@
 /* Fonts */
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap');
 
 :root {
     --bg-color: #f8fafc;
-    /* Slate 50 - Off-white base */
     --bg-gradient: radial-gradient(circle at 50% 0%, #eef2ff 0%, #f8fafc 100%);
-    /* Soft lavender mesh fade to Slate 50 */
-    --glass-bg: rgba(255, 255, 255, 0.75);
-    /* Translucent pure white */
-    --glass-border: rgba(15, 23, 42, 0.08);
-    /* Subtle slate-colored border */
+    --card-bg: rgba(255, 255, 255, 0.95);
+    --card-border: rgba(15, 23, 42, 0.09);
+    --input-bg: #ffffff;
+    --input-border: #cbd5e1;
     --primary: #6366f1;
-    /* Indigo 500 */
     --primary-hover: #4f46e5;
-    /* Indigo 600 */
     --accent: #d946ef;
-    /* Fuchsia 500 - Neon accent */
     --text-main: #0f172a;
-    /* Slate 900 - Dark slate text */
     --text-muted: #475569;
-    /* Slate 600 - Muted slate text */
     --success: #10b981;
-    /* Emerald 500 */
-    --card-shadow: 0 20px 25px -5px rgba(15, 23, 42, 0.05), 0 10px 10px -5px rgba(15, 23, 42, 0.03);
-    --glow: 0 0 20px rgba(99, 102, 241, 0.12);
+    --card-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.05), 0 8px 10px -6px rgba(15, 23, 42, 0.03);
+    --glow: 0 0 20px rgba(99, 102, 241, 0.15);
 }
 
-/* Global Reset & Body */
+/* Enforce Light Mode Canvas */
 .stApp {
-    background: var(--bg-color);
-    background-image: var(--bg-gradient);
+    background-color: var(--bg-color) !important;
+    background-image: var(--bg-gradient) !important;
+    font-family: 'Inter', sans-serif !important;
+    color: var(--text-main) !important;
+}
+
+/* Streamlit Header Bar */
+header[data-testid="stHeader"] {
+    background-color: transparent !important;
+}
+
+/* Headings */
+h1, h2, h3, h4, h5, h6 {
+    font-family: 'Outfit', sans-serif !important;
+    color: var(--text-main) !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.02em !important;
+}
+
+/* Generic Text & Markdown */
+p, span, div, li {
     font-family: 'Inter', sans-serif;
     color: var(--text-main);
 }
 
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
-    font-family: 'Outfit', sans-serif;
+/* All Form Labels (Radio buttons, Checkboxes, Inputs, Selectboxes) */
+label,
+[data-testid="stWidgetLabel"] p,
+[data-testid="stWidgetLabel"] span,
+[data-testid="stWidgetLabel"] div,
+[data-testid="stRadio"] label,
+[data-testid="stRadio"] label p,
+[data-testid="stRadio"] label span,
+[data-testid="stCheckbox"] label,
+[data-testid="stCheckbox"] label p,
+[data-testid="stCheckbox"] label span {
     color: var(--text-main) !important;
-    font-weight: 700;
-    letter-spacing: -0.02em;
-    text-shadow: none !important;
+    font-weight: 500 !important;
+    font-family: 'Inter', sans-serif !important;
 }
 
 /* Sidebar */
 section[data-testid="stSidebar"] {
-    background-color: rgba(241, 245, 249, 0.96) !important;
-    /* Slate 100 */
-    border-right: 1px solid var(--glass-border) !important;
+    background-color: #f1f5f9 !important;
+    border-right: 1px solid var(--card-border) !important;
 }
 
 section[data-testid="stSidebar"] .block-container {
-    padding-top: 3rem;
+    padding-top: 2rem;
+    padding-bottom: 2rem;
 }
 
-/* Inputs (Text Input, Selectbox, Text Area) */
-.stTextInput>div[data-baseweb="input"],
-.stSelectbox div[data-baseweb="select"]>div,
-.stTextArea textarea {
-    background-color: rgba(255, 255, 255, 0.9) !important;
-    border: 1px solid #cbd5e1 !important;
+section[data-testid="stSidebar"] label,
+section[data-testid="stSidebar"] p,
+section[data-testid="stSidebar"] span {
     color: var(--text-main) !important;
-    border-radius: 12px !important;
-    backdrop-filter: blur(12px);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-    font-family: 'Inter', sans-serif;
+}
+
+/* Form Inputs (Text Input, Text Area, Selectbox) */
+.stTextInput > div[data-baseweb="input"],
+.stTextArea textarea {
+    background-color: #ffffff !important;
+    border: 1px solid var(--input-border) !important;
+    border-radius: 10px !important;
+    color: var(--text-main) !important;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
 }
 
 .stTextInput input {
+    background-color: #ffffff !important;
+    color: var(--text-main) !important;
     border: none !important;
-    background-color: transparent !important;
+    font-family: 'Inter', sans-serif !important;
+}
+
+.stSelectbox div[data-baseweb="select"] > div {
+    background-color: #ffffff !important;
+    border: 1px solid var(--input-border) !important;
+    border-radius: 10px !important;
+    color: var(--text-main) !important;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+.stSelectbox div[data-baseweb="select"] span {
     color: var(--text-main) !important;
 }
 
-.stTextInput>div[data-baseweb="input"]:focus-within,
-.stSelectbox div[data-baseweb="select"]>div:focus-within,
+.stTextInput > div[data-baseweb="input"]:focus-within,
+.stSelectbox div[data-baseweb="select"] > div:focus-within,
 .stTextArea textarea:focus {
     border-color: var(--primary) !important;
-    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2) !important;
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.25) !important;
     background-color: #ffffff !important;
 }
 
-/* Buttons */
-.stButton>button {
+/* Action Buttons */
+.stButton > button {
     background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%) !important;
-    color: white !important;
+    color: #ffffff !important;
     border: none !important;
-    outline: none !important;
-    border-radius: 12px !important;
-    padding: 0.75rem 1.5rem !important;
+    border-radius: 10px !important;
+    padding: 0.65rem 1.25rem !important;
     font-weight: 600 !important;
-    letter-spacing: 0.02em !important;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    letter-spacing: 0.01em !important;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease !important;
     box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2) !important;
     width: 100% !important;
-    text-transform: uppercase !important;
-    font-size: 0.9rem !important;
+    font-size: 0.95rem !important;
 }
 
-.stButton>button:hover {
-    transform: translateY(-2px) scale(1.01) !important;
-    box-shadow: 0 8px 25px rgba(99, 102, 241, 0.35), 0 0 15px rgba(217, 70, 239, 0.15) !important;
-    background: linear-gradient(135deg, var(--accent) 0%, var(--primary) 100%) !important;
+.stButton > button:hover {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 6px 18px rgba(99, 102, 241, 0.3) !important;
+    background: linear-gradient(135deg, var(--primary-hover) 0%, var(--primary) 100%) !important;
 }
 
-.stButton>button:active {
-    transform: translateY(0) scale(1.0) !important;
-}
-
-.stButton>button:focus,
-.stButton>button:active:focus {
-    outline: none !important;
-    border: none !important;
-    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2) !important;
-}
-
-/* Secondary Buttons (Outlined) */
-button[kind="secondary"] {
-    background: transparent !important;
-    border: 1px solid #cbd5e1 !important;
-    color: var(--text-muted) !important;
-}
-
-button[kind="secondary"]:hover {
-    border-color: var(--text-main) !important;
-    color: var(--text-main) !important;
-    background: rgba(15, 23, 42, 0.04) !important;
+.stButton > button:active {
+    transform: translateY(0) !important;
 }
 
 /* Cards & Containers */
 .card {
-    background: var(--glass-bg);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid var(--glass-border);
-    border-radius: 20px;
-    padding: 2.5rem;
-    margin-bottom: 2rem;
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 16px;
+    padding: 2rem;
+    margin-bottom: 1.5rem;
     box-shadow: var(--card-shadow);
 }
 
-/* Recent Roadmap Cards in Sidebar */
 .recent-roadmap-card, .recent-roadmap-card-active {
-    border: 1px solid var(--glass-border) !important;
-    border-radius: 12px !important;
-    padding: 16px !important;
-    margin-bottom: 12px !important;
-    background-color: rgba(255, 255, 255, 0.8) !important;
-    backdrop-filter: blur(12px) !important;
-    -webkit-backdrop-filter: blur(12px) !important;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03) !important;
+    border: 1px solid var(--card-border) !important;
+    border-radius: 10px !important;
+    padding: 14px !important;
+    margin-bottom: 10px !important;
+    background-color: #ffffff !important;
+    transition: border-color 0.2s ease, transform 0.2s ease !important;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05) !important;
 }
 
 .recent-roadmap-card:hover {
-    transform: translateY(-2px) !important;
-    border-color: rgba(99, 102, 241, 0.3) !important;
-    box-shadow: 0 8px 12px -3px rgba(15, 23, 42, 0.08), 0 3px 6px -2px rgba(15, 23, 42, 0.05) !important;
+    border-color: var(--primary) !important;
+    transform: translateY(-1px) !important;
 }
 
 .recent-roadmap-card-active {
     border-color: var(--primary) !important;
-    background: linear-gradient(135deg, rgba(238, 242, 255, 0.85) 0%, rgba(255, 255, 255, 0.85) 100%) !important;
-    box-shadow: var(--glow), 0 8px 12px -3px rgba(15, 23, 42, 0.08) !important;
+    border-left: 4px solid var(--primary) !important;
+    background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%) !important;
+    box-shadow: var(--glow) !important;
 }
 
 .recent-roadmap-card p, .recent-roadmap-card-active p {
-    margin: 4px 0 !important;
-    font-size: 0.9rem !important;
+    margin: 3px 0 !important;
+    font-size: 0.88rem !important;
+    color: var(--text-muted) !important;
 }
 
 /* Tabs */
 .stTabs [data-baseweb="tab-list"] {
-    gap: 12px;
+    gap: 8px;
     background-color: transparent;
-    border-bottom: 1px solid var(--glass-border);
-    padding-bottom: 8px;
+    border-bottom: 1px solid var(--card-border);
+    padding-bottom: 6px;
 }
 
 .stTabs [data-baseweb="tab"] {
-    background-color: transparent;
     border-radius: 8px;
-    color: var(--text-muted);
-    padding: 10px 24px;
+    color: var(--text-muted) !important;
+    padding: 8px 20px;
     font-weight: 600;
     font-family: 'Outfit', sans-serif;
-    transition: all 0.2s ease;
+    transition: color 0.2s ease, background-color 0.2s ease;
 }
 
 .stTabs [data-baseweb="tab"]:hover {
-    color: var(--text-main);
-    background-color: rgba(15, 23, 42, 0.03);
+    color: var(--text-main) !important;
 }
 
 .stTabs [aria-selected="true"] {
-    background-color: rgba(99, 102, 241, 0.08) !important;
+    background-color: rgba(99, 102, 241, 0.12) !important;
     color: var(--primary) !important;
-    border: 1px solid rgba(99, 102, 241, 0.2);
-    border-bottom: none;
+    border: 1px solid rgba(99, 102, 241, 0.3) !important;
+    border-bottom: none !important;
 }
 
-/* File Uploader */
+/* File Uploader Dropzone */
 [data-testid="stFileUploaderDropzone"] {
-    background-color: rgba(255, 255, 255, 0.6) !important;
+    background-color: #ffffff !important;
     border: 2px dashed #cbd5e1 !important;
-    border-radius: 16px;
-    transition: all 0.3s ease;
-    padding: 2rem;
+    border-radius: 14px !important;
+    padding: 1.75rem !important;
+    transition: border-color 0.2s ease;
 }
 
 [data-testid="stFileUploaderDropzone"]:hover {
     border-color: var(--primary) !important;
-    background-color: rgba(238, 242, 255, 0.4) !important;
-    box-shadow: 0 0 15px rgba(99, 102, 241, 0.05);
+}
+
+[data-testid="stFileUploaderDropzone"] span,
+[data-testid="stFileUploaderDropzone"] small,
+[data-testid="stFileUploaderDropzone"] button {
+    color: var(--text-muted) !important;
 }
 
 /* Expander */
-.streamlit-expanderHeader {
-    background-color: rgba(255, 255, 255, 0.7) !important;
-    border: 1px solid var(--glass-border) !important;
+div[data-testid="stExpander"] {
+    background-color: #ffffff !important;
+    border: 1px solid var(--card-border) !important;
     border-radius: 12px !important;
+}
+
+div[data-testid="stExpander"] details summary span,
+div[data-testid="stExpander"] details summary p {
     color: var(--text-main) !important;
-    font-weight: 600;
-    font-family: 'Outfit', sans-serif;
+    font-weight: 600 !important;
 }
 
-.streamlit-expanderContent {
-    background-color: rgba(255, 255, 255, 0.5) !important;
-    border: 1px solid var(--glass-border);
-    border-top: none;
-    border-bottom-left-radius: 12px;
-    border-bottom-right-radius: 12px;
-    color: var(--text-muted) !important;
-    padding: 1.5rem !important;
-}
-
-/* Progress Bar */
-.stProgress>div>div>div>div {
+/* Progress Indicator */
+.stProgress > div > div > div > div {
     background: linear-gradient(90deg, var(--primary), var(--accent)) !important;
-    box-shadow: 0 0 10px rgba(99, 102, 241, 0.2);
 }
 
-/* Checkbox */
-.stCheckbox label span {
-    color: var(--text-main);
-    font-family: 'Inter', sans-serif;
-}
-
-/* Custom Footer */
+/* Footer */
 .footer {
-    margin-top: 5rem;
-    padding: 3rem 0;
+    margin-top: 4rem;
+    padding: 2.5rem 0;
     text-align: center;
-    border-top: 1px solid var(--glass-border);
-    color: var(--text-muted);
+    border-top: 1px solid var(--card-border);
+    color: var(--text-muted) !important;
     font-size: 0.85rem;
 }
 
 .footer a {
-    color: var(--primary);
+    color: var(--primary) !important;
     text-decoration: none;
-    margin: 0 12px;
-    transition: color 0.2s;
+    margin: 0 10px;
     font-weight: 500;
 }
 
 .footer a:hover {
-    color: var(--accent);
     text-decoration: underline;
 }
 
-/* Animations */
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
+/* Responsive Media Queries for Mobile Parity */
+@media screen and (max-width: 768px) {
+    .hero-title {
+        font-size: 2.2rem !important;
     }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
+    .hero-subtitle {
+        font-size: 1rem !important;
     }
-}
-
-.stMarkdown,
-.stSuccess,
-.stInfo,
-.stWarning,
-.stError {
-    animation: fadeIn 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* Alerts */
-.stSuccess, .stSuccess p, .stSuccess span, .stSuccess div {
-    color: #065f46 !important;
-}
-.stSuccess {
-    background-color: rgba(16, 185, 129, 0.1) !important;
-    border: 1px solid rgba(16, 185, 129, 0.25) !important;
-    border-radius: 12px;
-}
-
-.stInfo, .stInfo p, .stInfo span, .stInfo div {
-    color: #3730a3 !important;
-}
-.stInfo {
-    background-color: rgba(99, 102, 241, 0.1) !important;
-    border: 1px solid rgba(99, 102, 241, 0.25) !important;
-    border-radius: 12px;
-}
-
-.stWarning, .stWarning p, .stWarning span, .stWarning div {
-    color: #92400e !important;
-}
-.stWarning {
-    background-color: rgba(245, 158, 11, 0.1) !important;
-    border: 1px solid rgba(245, 158, 11, 0.25) !important;
-    border-radius: 12px;
-}
-
-.stError, .stError p, .stError span, .stError div {
-    color: #991b1b !important;
-}
-.stError {
-    background-color: rgba(239, 68, 68, 0.1) !important;
-    border: 1px solid rgba(239, 68, 68, 0.25) !important;
-    border-radius: 12px;
+    .hero-container {
+        flex-direction: column !important;
+        text-align: center !important;
+        gap: 10px !important;
+    }
+    .card {
+        padding: 1.25rem !important;
+    }
+    .stTabs [data-baseweb="tab"] {
+        padding: 6px 14px !important;
+        font-size: 0.9rem !important;
+    }
 }

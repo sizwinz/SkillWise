@@ -1,10 +1,10 @@
 streamlit>=1.32.0
 PyMuPDF>=1.23.8
-google-generativeai>=0.3.2
+google-generativeai>=0.8.0
+requests>=2.31.0
 pytesseract>=0.3.10
 Pillow>=10.2.0
 reportlab>=4.1.0
-nltk>=3.8.1
 python-dotenv>=1.0.1
-plotly
-pandas
+plotly>=5.18.0
+pandas>=2.1.0
